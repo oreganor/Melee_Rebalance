@@ -1,2 +1,2 @@
 # Melee_Rebalance
-Melee Skill Rabalance for Rimworld
+Melee Skill rebalance for Rimworld

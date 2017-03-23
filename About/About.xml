@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ModMetaData>
+	<name>Melee Rebalance</name>
+	<author>Oreganor</author>
+	<url>https://ludeon.com/forums/index.php?topic=2890.0</url>
+	<targetVersion>0.16.1390</targetVersion>
+	<description>This Mod is an attempt to bring more utility to Melee Skill and melee tactics by highlighting the impact of the skill in different mechanics. The main changes are:
+	
+- Altered skill progression/curves/defaults so what appears in-game tooltips as Melee Chance gets closer to real chances to land a hit on the enemy. This is particularly apparent in non-skilled Vanilla entities like animals that are silently hardcoded at 60% chance to hit with no effects coming from the state of a given pawn. The overall effect sought is that highly skilled fighters become deadlier while low skill fighters become much worse at dealing melee damage compared to Vanilla.
+	
+- Created a "Parry" mechanic as a 3rd result on any melee attempted. The chance a regular hit turns into a "Parry" is based on the Melee Chance of the target. A parried attack has different effects on its target based on a few factors:
+	
+	* If the target is wearing any piece of Apparel able to absorb damage, the full damage of the attack will be absorbed by it. Vanilla Personal Shields are hardcoded to ignore attacks made from adjacent cells but I used a "dirty trick" so they absorb damage on successful parries also.
+	
+	* If the target is wielding a Melee Weapon, no wound will be suffered but the Weapon will loose HP as a fraction of the attack damage. This fraction is reduced the higher the Melee Chance of the target. The Weapon can be destroyed as a result of absorbing this damage.
+	
+	* An unarmed target will suffer half the damage on a Parry. A pawn wielding a Ranged Weapon falls on this category also.
+
+
+= INCOMPATIBILITIES =
+The bulk of current modifications are based on detouring Rimworld.Verb_MeleeAttack.TryCastShot() method. The Detour is done using a Harmony Prefix (Currently in Stop Execution Mode) meaning compatibility with other Mods that use Harmony is doable with minimum effort from my part. There are also changes on defs, but are external and easy to integrate as patches.
+	
+ATM the mod leaves no traces on your savegame, meaning it's safe to use on an ongoing game and safe to be removed without further considerations.
+	
+
+= TODO =
+- Make melee weapons that are destroyed while parrying to be droped with a few hp instead. For better visualization of what's going on and for users of repair mods to have a chance to keep their best melee weapons.
+- Parry Saturation. ATM the number of concurrent fighters attacking the same defender do not alter defender's parry chances. This is not ideal and will be changed sooner or later.
+- Full Harmony library integration. I'm holding Sources publishing until I can show a decently clean code were all interactions derived from using detours go through Harmony Library, not just the Detours themselves. I have some issues using Traverse tool that I need to investigate/report in Harmony channels.
+- Melee Combat toggle buttons to customize Pawn behaviour regarding "safety" while meleeing and/or allowing different "Attack Modes".
+- Parry Chance Stat. As a standalone so apparel/traits can affect defensive chances independently of offensive chances.
+- Better Sounds/Visual notifications when a Parry happens.
+	
+	
+	</description>
+</ModMetaData>
