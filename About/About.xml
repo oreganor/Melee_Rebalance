@@ -12,10 +12,15 @@
 	
 	* If the target is wearing any piece of Apparel able to absorb damage, the full damage of the attack will be absorbed by it. Vanilla Personal Shields are an example of this change, they will try to absorb the damage of a melee attack that's parried.
 	
-	* If the target is wielding a Melee Weapon, no wound will be suffered but the Weapon will loose HP as a fraction of the attack damage. This fraction is reduced the higher the Melee Chance of the target. The Weapon can be destroyed as a result of absorbing this damage.
+	* If the target is wielding a Melee Weapon, no wound will be suffered but the Weapon will loose HP as a fraction of the attack damage. This fraction is reduced the higher the Melee Chance of the target. The weapon will be dropped into nearby ground if the absorbed damage from the hit would have destroyed it. If there is no room to drop the weapon nearby, it will be destroyed instead.
 	
 	* An unarmed target will suffer half the damage on a Parry. A pawn wielding a Ranged Weapon falls on this category also.
+	
+	* Parry chances are reduced the more parries a pawn does between his/her melee attacks.
 
+
+= ACKNOWLEDGEMENTS =
+pardeike: Without Harmony, gracefull detouring wouldn't have been possible.
 
 = INCOMPATIBILITIES =
 The bulk of current modifications are based on detouring Rimworld.Verb_MeleeAttack.TryCastShot() method. The Detour is done using a Harmony Prefix (Currently in Stop Execution Mode) meaning compatibility with other Mods that use Harmony is doable with minimum effort from my part. There are also changes on defs, but are external and easy to integrate as patches.
@@ -25,18 +30,16 @@ ATM the mod leaves no traces on your savegame, meaning it's safe to use on an on
 
 = TODO =
 
-- Parry Saturation. ATM the number of concurrent fighters attacking the same defender do not alter defender's parry chances. This is not ideal and will be changed sooner or later.
-
-- Full Harmony library integration. I'm holding Sources publishing until I can show a decently clean code were all interactions derived from using detours go through Harmony Library, not just the Detours themselves. I have some issues using Traverse tool that I need to investigate/report in Harmony channels.
-
-- Make melee weapons that are destroyed while parrying to be droped with a few hp instead. For better visualization of what's going on and for users of repair mods to have a chance to keep their best melee weapons.
-
 - Melee Combat toggle buttons to customize Pawn behaviour regarding "safety" while meleeing and/or allowing different "Attack Modes".
 
 - Parry Chance Stat. As a standalone so apparel/traits can affect defensive chances independently of offensive chances.
 
 - Better Sounds/Visual notifications when a Parry happens.
-	
+
+
+= POWERED BY =
+
+Harmony 1.0.9.1. Detouring Library.
 	
 	</description>
 </ModMetaData>
