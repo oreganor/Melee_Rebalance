@@ -222,13 +222,6 @@ namespace MeleeRebalance
     [HarmonyPatch("TryCastShot")]
     public static class VerbMeleeTryCastShotPatch
     {
-        //public static void Postfix()
-        //{
-        //    int dosomething = 1;
-        //    dosomething++;
-        //    return;
-        //}
-
         public static bool Prefix(Verb_MeleeAttack __instance, ref bool __result)
         {
             var verbMA = Traverse.Create(__instance);
@@ -339,10 +332,10 @@ namespace MeleeRebalance
                 dbh = Constants.MaxParryChance;
             }
             float ehc = abh * (1f - dbh);
-            //Log.Warning(string.Concat(new object[]
-            //    {
-            //    attacker,"(BHC ",abh,") tried to hit ",tpawn,"(BHC ",dbh,") with effective hit chance ",ehc," and rolled ",roll
-            //    }));
+            Log.Warning(string.Concat(new object[]
+                {
+                attacker,"(BHC ",abh,") tried to hit ",tpawn,"(BHC ",dbh,") with effective hit chance ",ehc," and rolled ",roll
+                }));
             if (roll > abh)
             {
                 return 0;
@@ -550,13 +543,6 @@ namespace MeleeRebalance
     [HarmonyPatch("GetGizmos")]
     public static class Pawn_DraftControllerGetGizmosPatch
     {
-        //public static bool Prefix()
-        //{
-        //    int dosomething = 1;
-        //    dosomething++;
-        //    return true;
-        //}
-
         public static void Postfix(Pawn_DraftController __instance, ref IEnumerable<Gizmo> __result)
         {
             // We add the command toggle corresponding to the token in the value
