@@ -15,93 +15,187 @@ namespace MeleeRebalance
     [StaticConstructorOnStartup]
     public class MainController : MonoBehaviour
     {
-        private static List<ParryCounter> Parrycounters { get; set; }
+        private static List<MRpawntoken> Pawntokens { get; set; }
 
-        private static MainController instance;
+        private static MRattackmode[] Attackmodes { get; set; }
 
-        public static MainController Instance
+        private static bool worldloaded = false;
+
+        //private static HarmonyInstance harmony;
+
+        public void FixedUpdate()
         {
-            get
+            // We check if the world is loaded to trigger DefererLoader
+            if (!worldloaded && Current.Game != null && Current.Game.World != null)
             {
-                MainController instance;
-                if ((instance = MainController.instance) == null)
-                {
-                    instance = MainController.instance = new MainController();
-                }
-                return instance;
+                // Rdy to load resources
+                DeferedLoader();
+                worldloaded = true;
             }
         }
 
+        private static void DeferedLoader()
+        {
+            //We prepare the attack mode array
+            Attackmodes = new MRattackmode[Constants.Maxspecialeffects];
+
+            //Loading Textures & translations after init
+            for (int i = 0; i < Constants.Maxspecialeffects; i++)
+            {
+                Attackmodes[i]= new MRattackmode(ContentFinder<Texture2D>.Get(Constants.icontexpath + Constants.icontexname[i]),
+                    Constants.labelstring[i].Translate(), string.Format(Constants.descstring[i].Translate(),Constants.methresholds[i],
+                    Constants.mechances[i]), Constants.methresholds[i], Constants.mechances[i], i);
+                //Log.Warning(string.Concat(new object[]
+                //{
+                //    "Loaded resources for ",Constants.icontexname[i]," Label:", commandLabel[i], " Desc:", commandDesc[i]
+                //}));
+            }
+        }
 
         static MainController()
         {
+
+            //Initializing Monitorized pawn list
+            Pawntokens = new List<MRpawntoken>();
+
             //Initializing Harmony detours
-            var harmony = HarmonyInstance.Create("net.oreganor.rimworld.mod.meleeparry");
+            var harmony = HarmonyInstance.Create("net.oreganor.rimworld.mod.meleerebalance");
             harmony.PatchAll(Assembly.GetExecutingAssembly());
 
-            //Initializing Parry Counter Controller
-            Parrycounters = new List<ParryCounter>();
+            //var original = typeof(Verb_MeleeAttack).GetMethod("TryCastShot");
+            //var prefix = typeof(VerbMeleeTryCastShotPatch).GetMethod("Prefix");
+            //var postfix = typeof(VerbMeleeTryCastShotPatch).GetMethod("Postfix");
+            //harmony.Patch(original, new HarmonyMethod(prefix), new HarmonyMethod(postfix));
+
+            //original = typeof(Pawn_DraftController).GetMethod("GetGizmos");
+            //prefix = typeof(Pawn_DraftControllerGetGizmosPatch).GetMethod("Prefix");
+            //postfix = typeof(Pawn_DraftControllerGetGizmosPatch).GetMethod("Postfix");
+            //harmony.Patch(original, new HarmonyMethod(prefix), new HarmonyMethod(postfix));
 
             //Adding the controller to the scene
-            GameObject gameObject = new GameObject(Constants.ControllerName);
-            UnityEngine.Object.DontDestroyOnLoad(gameObject);
-            gameObject.AddComponent<MainController>();
+            GameObject controllercontainer = new GameObject(Constants.ControllerName);
+            UnityEngine.Object.DontDestroyOnLoad(controllercontainer);
+            controllercontainer.AddComponent<MainController>();
+
         }
 
-        public void ResetParryCounter(Pawn pawn)
+        public static void ResetParryCounter(Pawn pawn)
         {
             // We scan the list for a reference to the pawn, cleaning all null reference
-            // If we find the pawn we reset the counter to -1
-            foreach (ParryCounter c in Parrycounters)
+            // If we find the pawn we reset the counter
+            foreach (MRpawntoken p in Pawntokens)
             {
-                if (c.pawn == null)
+                if (p.pawn == null)
                 {
-                    Parrycounters.Remove(c);
+                    Pawntokens.Remove(p);
                 }
                 else
                 {
-                    if (c.pawn.Equals(pawn))
+                    if (p.pawn.Equals(pawn))
                     {
-                        c.counter=0;
+                        p.counter = 0;
                         return;
                     }
                 }
             }
         }
 
-        public int GetParryCounter(Pawn pawn, bool increase)
+        public static int GetParryCounter(Pawn pawn, bool increase)
         {
             // We scan the list pruning null references and increase the counter if we find the pawn in it
             // If the pawn isn't found we create a new entry on the list
             // We return the current counter
-            foreach(ParryCounter c in Parrycounters)
+            foreach (MRpawntoken p in Pawntokens)
             {
-                if(c.pawn == null)
+                if (p.pawn == null)
                 {
-                    Parrycounters.Remove(c);
+                    Pawntokens.Remove(p);
                 }
                 else
                 {
-                    if (c.pawn.Equals(pawn))
+                    if (p.pawn.Equals(pawn))
                     {
-                        if(increase) c.counter++;
-                        return c.counter;
+                        if (increase) p.counter++;
+                        return p.counter;
                     }
                 }
             }
-            Parrycounters.Add(new ParryCounter(pawn));
-            return Parrycounters.Last().counter;
+            Pawntokens.Add(new MRpawntoken(pawn));
+            return Pawntokens.Last().counter;
+        }
+
+        public static MRpawntoken GetPawnToken(Pawn pawn)
+        {
+            // We scan the list pruning null references and if we find the pawn in it we return the full token
+            // If the pawn isn't found we create a new entry on the list with defaults
+            foreach (MRpawntoken p in Pawntokens)
+            {
+                if (p.pawn == null)
+                {
+                    Pawntokens.Remove(p);
+                }
+                else
+                {
+                    if (p.pawn.Equals(pawn))
+                    {
+                        return p;
+                    }
+                }
+            }
+            Pawntokens.Add(new MRpawntoken(pawn));
+            return Pawntokens.Last();
+        }
+
+        public static MRattackmode GetNextAttackMode(MRattackmode amode)
+        {
+            if (amode != null)
+            {
+                for (int i = 0; i < (Attackmodes.Count()-1); i++)
+                {
+                    if (Attackmodes[i].Equals(amode))
+                    {
+                        return Attackmodes[i + 1];
+                    }
+                }    
+            }
+            return Attackmodes.First();
         }
     }
 
-    public class ParryCounter
+    public class MRpawntoken
     {
         public int counter;
+        public MRattackmode amode;
         public Pawn pawn;
-        public ParryCounter(Pawn pawn)
+        public MRpawntoken(Pawn pawn)
         {
             this.counter = 0;
+            this.amode = MainController.GetNextAttackMode(null);
             this.pawn = pawn;
+        }
+        public void NextAttackMode()
+        {
+            this.amode = MainController.GetNextAttackMode(amode);
+            return;
+        }
+    }
+
+    public class MRattackmode
+    {
+        public int solver; // ATM we solve this in the Detour to simplify access to private data, but a full independent method is the right way to do this
+        public float threshold;
+        public float chance;
+        public Texture2D icontex;
+        public string label;
+        public string desc;
+        public MRattackmode(Texture2D icon, string label, string desc, float threshold, float chance, int solver)
+        {
+            this.icontex = icon;
+            this.label = label;
+            this.desc = desc;
+            this.threshold = threshold;
+            this.chance = chance;
+            this.solver = solver;
         }
     }
 
@@ -111,51 +205,29 @@ namespace MeleeRebalance
         public const float ParryReduction = 0.5f;
         public const float ParryCounterPenalty = 0.25f;
         public const string ControllerName = "MeleeRebalanceController";
+        public const int Maxspecialeffects = 4;
+        public const string icontexpath = "Commands/";
+        public static string[] icontexname = { "UI_Kill", "UI_Capture", "UI_Stun", "UI_Disarm" };
+        public static string[] labelstring = {"Meleerebalance_KillLabel", "Meleerebalance_CaptureLabel",
+            "Meleerebalance_StunLabel", "Meleerebalance_DisarmLabel"};
+        public static string[] descstring = {"Meleerebalance_KillDesc", "Meleerebalance_CaptureDesc",
+            "Meleerebalance_StunDesc", "Meleerebalance_DisarmDesc"};
+        public static float[] methresholds = { 0.20f, 0.40f, 0.30f, 0.30f };
+        public static float[] mechances = { 1f / 3f, 1f / 4f, 1f / 3f, 1f / 3f };
     }
 
+    // Verb_MeleeAttack Detour
+    // We always return false at the Prefix to halt vanilla behaviour
     [HarmonyPatch(typeof(Verb_MeleeAttack))]
     [HarmonyPatch("TryCastShot")]
     public static class VerbMeleeTryCastShotPatch
     {
-
-        //This is the old Prefix that patched GetHitChances Method
-        //[HarmonyPatch(typeof(Verb_MeleeAttack))]
-        //[HarmonyPatch("GetHitChances")]
-        //public static bool Prefix(Verb_MeleeAttack __instance, ref float __result, LocalTargetInfo target)
+        //public static void Postfix()
         //{
-        //    var verbMA = Traverse.Create(__instance);
-        //    __result = verbMA.Field("DefaultHitChance").GetValue<float>(); // Default chances if anything else fails to evaluate
-        //    if (verbMA.Field("surpriseAttack").GetValue<bool>() || verbMA.Method("IsTargetImmobile", target).GetValue<bool>())
-        //    {
-        //        __result = 1f; // This also checks that the target is a pawn.
-        //        return false;
-        //    }
-        //    if (__instance.CasterPawn.skills != null)
-        //    {
-        //        // Against active pawns, the chance to hit is reduced by the defender's melee chance down to 1/3 of the base attack chance
-        //        Pawn tpawn = target.Thing as Pawn;
-        //        __result = Math.Max(__instance.CasterPawn.GetStatValue(StatDefOf.MeleeHitChance, true) / 3f,
-        //            __instance.CasterPawn.GetStatValue(StatDefOf.MeleeHitChance, true) - tpawn.GetStatValue(StatDefOf.MeleeHitChance, true));
-        //        Log.Warning(string.Concat(new object[]
-        //            {
-        //            __instance.CasterPawn,"(BHC ",__instance.CasterPawn.GetStatValue(StatDefOf.MeleeHitChance, true),
-        //            ") tried to hit ",
-        //            tpawn,"(BHC ",tpawn.GetStatValue(StatDefOf.MeleeHitChance, true),") with final melee hit chance ",
-        //            __result,"."
-        //            }));
-        //    }
-        //    return false;
+        //    int dosomething = 1;
+        //    dosomething++;
+        //    return;
         //}
-        private static MainController parrycontroller;
-
-        public static MainController Parrycontroller
-        {
-            get
-            {
-                GameObject temp = GameObject.Find(Constants.ControllerName);
-                return (parrycontroller = temp.GetComponent<MainController>());
-            }
-        }
 
         public static bool Prefix(Verb_MeleeAttack __instance, ref bool __result)
         {
@@ -183,22 +255,14 @@ namespace MeleeRebalance
                 __instance.CasterPawn.skills.Learn(SkillDefOf.Melee, 250f, false);
             }
             SoundDef soundDef;
-            // We reset the Parry Counter of the attacker before evaluating anything else
-            Parrycontroller.ResetParryCounter(__instance.CasterPawn);
-            //Log.Warning(string.Concat(new object[]
-            //{
-            //    "Evaluating melee attack by ",__instance.CasterPawn
-            //}));
-            switch (ResolveMeleeAttack(__instance.CasterPawn, thing, verbMA.Field("surpriseAttack").GetValue<bool>())) // 0 Miss, 1 Hit, 2 Parry)
+            // We register the attacker and reset its ParryCounters
+            MainController.ResetParryCounter(__instance.CasterPawn);
+            switch (ResolveMeleeAttack(__instance.CasterPawn, thing, verbMA.Field("surpriseAttack").GetValue<bool>())) // 0 Miss, 1 Hit, 2 Parry, 3 Critical
             {
                 case 1: // Hit
                     __result = true;
-                    //Log.Warning(string.Concat(new object[]
-                    //{
-                    //    "Hit against",target," !"
-                    //}));
-                    verbMA.Method("ApplyMeleeDamageToTarget", new Type[] { typeof(LocalTargetInfo) }).GetValue(target);
-                        if (thing.def.category == ThingCategory.Building)
+                    ApplyNormalDamageToTarget(__instance, __instance.CasterPawn, target);
+                    if (thing.def.category == ThingCategory.Building)
                     {
                         soundDef = verbMA.Method("SoundHitBuilding").GetValue<SoundDef>();
                     }
@@ -208,19 +272,16 @@ namespace MeleeRebalance
                     }
                     break;
                 case 2: // Parry
-                    //Log.Warning(string.Concat(new object[]
-                    //{
-                    //    "Parry!"
-                    //}));
                     ApplyParryDamageToTarget(__instance, __instance.CasterPawn, target);
                     __result = false;
                     soundDef = SoundDefOf.MetalHitImportant;
                     break;
+                case 3: // Critical
+                    ApplyCriticalDamageToTarget(__instance, __instance.CasterPawn, target);
+                    __result = true;
+                    soundDef = SoundDefOf.Thunder_OnMap;
+                    break;
                 default: // Miss
-                    //Log.Warning(string.Concat(new object[]
-                    //{
-                    //    "Miss!"
-                    //}));
                     __result = false;
                     soundDef = verbMA.Method("SoundMiss").GetValue<SoundDef>();
                     break;
@@ -245,32 +306,20 @@ namespace MeleeRebalance
             return false;
         }
 
-        //private const BindingFlags BindFlags = BindingFlags.Instance
-        //                               | BindingFlags.Public
-        //                               | BindingFlags.NonPublic
-        //                               | BindingFlags.Static;
 
         private static int ResolveMeleeAttack(Pawn attacker, Thing defender, bool surprise)
         {
             // We generate the result of a melee attack based on skills involved and some extra factors
-            // 0: Miss, 1: Hit, 2: Parry
+            // 0: Miss, 1: Hit, 2: Parry, 3: Critical
             // Surprise attacks ALWAYS hit
             if (surprise)
             {
-                //Log.Warning(string.Concat(new object[]
-                //{
-                //    "Suprise Attack by ",attacker,"!"
-                //}));
-                //return 1;
+                return 1;
             }
-            // Attacks against immobile/downed targets or things that aren't pawns ALWAYS hit
+            // Attacks against immobile/downed targets or things that aren't pawns ALWAYS hit and can't trigger special effects
             Pawn tpawn = defender as Pawn;
             if (defender.def.category != ThingCategory.Pawn || tpawn.Downed || tpawn.GetPosture() != PawnPosture.Standing)
             {
-                //Log.Warning(string.Concat(new object[]
-                //{
-                //    "Defender ",defender," is down/immobile"
-                //}));
                 return 1;
             }
             // Against regular targets the effective melee skill of the defender reduces multiplicatively the chance to hit of the attacker.
@@ -278,28 +327,37 @@ namespace MeleeRebalance
             float roll = Rand.Value;
             float abh = attacker.GetStatValue(StatDefOf.MeleeHitChance, true);
             float dbh = tpawn.GetStatValue(StatDefOf.MeleeHitChance, true);
-            // We reduce the effective defensive skill based on the registered parry counters for this pawn.
-            dbh -= Constants.ParryCounterPenalty * (float)parrycontroller.GetParryCounter(tpawn, false);
+            MRpawntoken token = MainController.GetPawnToken(tpawn);
+            // We reduce the base defensive skill based on the registered parry counters for target pawn.
+            dbh -= Constants.ParryCounterPenalty * (float)token.counter;
             if (dbh < 0f)
             {
                 dbh = 0f;
-            } else if (dbh > Constants.MaxParryChance)
+            }
+            else if (dbh > Constants.MaxParryChance)
             {
                 dbh = Constants.MaxParryChance;
             }
-            Log.Warning(string.Concat(new object[]
-                {
-                attacker,"(BHC ",abh,") tried to hit ",tpawn,"(BHC ",dbh,") with effective hit chance ",abh*(1f - dbh)," and rolled ",roll
-                }));
+            float ehc = abh * (1f - dbh);
+            //Log.Warning(string.Concat(new object[]
+            //    {
+            //    attacker,"(BHC ",abh,") tried to hit ",tpawn,"(BHC ",dbh,") with effective hit chance ",ehc," and rolled ",roll
+            //    }));
             if (roll > abh)
             {
                 return 0;
             }
             else
             {
-                // The attempt was either a parry or a hit, so we increase the counter for this target
-                parrycontroller.GetParryCounter(tpawn, true);
-                if (roll <= abh * (1f - dbh))
+                // The attempt was not a miss so we increase the parry counters of the target
+                token.counter++;
+                // Now we check for critical effects
+                token = MainController.GetPawnToken(attacker);
+                if (ehc > token.amode.threshold && roll <= (ehc * token.amode.chance))
+                {
+                    return 3;
+                }
+                if (roll <= ehc)
                 {
                     return 1;
                 }
@@ -325,6 +383,29 @@ namespace MeleeRebalance
             return false;
         }
 
+        private static void ApplyNormalDamageToTarget(Verb_MeleeAttack vMA, Pawn attacker, LocalTargetInfo target)
+        {
+            MRpawntoken token = MainController.GetPawnToken(attacker);
+            Pawn tpawn = target.Thing as Pawn;
+            // Immobile targets receive full damage on normal hits (The only possible result against them) with independence of the Attack Mode selected
+            bool immobile = (target.Thing.def.category != ThingCategory.Pawn) || tpawn.Downed || (tpawn.GetPosture() != PawnPosture.Standing);
+            if (token.amode.solver == 3 && !immobile) return; // On Disarm Mode we do no damage at all
+            var DamageInfosToApply = Traverse.Create(vMA).Method("DamageInfosToApply", new Type[] { typeof(LocalTargetInfo) });
+            foreach (DamageInfo current in (DamageInfosToApply.GetValue<IEnumerable<DamageInfo>>(target)))
+            {
+                if (target.ThingDestroyed)
+                {
+                    break;
+                }
+                if(!immobile && (token.amode.solver==1 || token.amode.solver == 2))
+                {
+                    // On Capture & Stun we do half the damage on normal hits
+                    current.SetAmount(Mathf.Max(1, Mathf.RoundToInt(current.Amount * 0.5f)));
+                }
+                target.Thing.TakeDamage(current);
+            }
+        }
+
         private static void ApplyParryDamageToTarget(Verb_MeleeAttack vMA, Pawn attacker, LocalTargetInfo target)
         {
             // The main differences between a regular hit and a parried one regarding damage are the following:
@@ -332,6 +413,8 @@ namespace MeleeRebalance
             // - If the target is wielding a melee weapon it will absorb all the damage of the attack suffering 
             //   Original Damage * ParryReduction * (1-Melee Skill) (minimum of 1) of damage
             // - If the target is unarmed, the damage received will be reduced by ParryReduction
+            MRpawntoken token = MainController.GetPawnToken(attacker);
+            if (token.amode.solver == 3) return; // On Disarm Mode we do no damage at all on parried hits
             bool rollback = false;
             Pawn tpawn = target.Thing as Pawn;
             var DamageInfosToApply = Traverse.Create(vMA).Method("DamageInfosToApply", new Type[] { typeof(LocalTargetInfo) });
@@ -341,18 +424,23 @@ namespace MeleeRebalance
                 {
                     break;
                 }
+                if (token.amode.solver == 1 || token.amode.solver == 2)
+                {
+                    // On Capture & Stun we do half the damage on parry hits
+                    current.SetAmount(Mathf.Max(1, Mathf.RoundToInt(current.Amount * 0.5f)));
+                }
                 rollback = current.Def.isExplosive; // We briefly active isExplosive to make Vanilla Personal Shields able to intercept melee damage
                 current.Def.isExplosive = true;
-                if (PawnHasActiveAbsorber(current, tpawn))
+                if (PawnHasActiveAbsorber(current, tpawn)) // We have to do a double check so Apparel absorbers take precedence over wield weapon damage
                 {
                     target.Thing.TakeDamage(current);
                 }
-                else if (tpawn.equipment!=null && tpawn.equipment.Primary!=null && tpawn.equipment.Primary.def.IsMeleeWeapon)
+                else if (tpawn.equipment != null && tpawn.equipment.Primary != null && tpawn.equipment.Primary.def.IsMeleeWeapon)
                 {
                     // The target has an equiped melee weapon after a parry, it will deny any damage to the target but the weapon will suffer some damage itself
-                    current.SetAmount(Mathf.Max(1, Mathf.RoundToInt(current.Amount * Constants.ParryReduction * (1f-tpawn.GetStatValue(StatDefOf.MeleeHitChance,true)))));
+                    current.SetAmount(Mathf.Max(1, Mathf.RoundToInt(current.Amount * Constants.ParryReduction * (1f - tpawn.GetStatValue(StatDefOf.MeleeHitChance, true)))));
                     // If the current damage is enough to destroy the weapon we try to drop it instead. If there is not enough room nearby, it will be destroyed
-                    if(tpawn.equipment.Primary.HitPoints <= current.Amount)
+                    if (tpawn.equipment.Primary.HitPoints <= current.Amount)
                     {
                         ThingWithComps thingwithcomps = new ThingWithComps();
                         if (tpawn.equipment.TryDropEquipment(tpawn.equipment.Primary, out thingwithcomps, tpawn.Position))
@@ -372,5 +460,133 @@ namespace MeleeRebalance
                 current.Def.isExplosive = rollback;
             }
         }
+
+        private static void ApplyCriticalDamageToTarget(Verb_MeleeAttack vMA, Pawn attacker, LocalTargetInfo target)
+        {
+            Pawn tpawn = target.Thing as Pawn;
+            var DamageInfosToApply = Traverse.Create(vMA).Method("DamageInfosToApply", new Type[] { typeof(LocalTargetInfo) });
+            MRpawntoken token = MainController.GetPawnToken(attacker);
+            switch (token.amode.solver)
+            {
+                case 0: // Kill
+                    // Double damage on all applied damage
+                    foreach (DamageInfo current in (DamageInfosToApply.GetValue<IEnumerable<DamageInfo>>(target)))
+                    {
+                        if (target.ThingDestroyed)
+                        {
+                            break;
+                        }
+                        current.SetAmount(Mathf.Max(1, Mathf.RoundToInt(current.Amount * 2f)));
+                        target.Thing.TakeDamage(current);
+                    }
+                    break;
+                case 1: // Capture
+                    // We do half the damage while waiting for the anesthesic to happen
+                    //foreach (DamageInfo current in (DamageInfosToApply.GetValue<IEnumerable<DamageInfo>>(target)))
+                    //{   
+                    //    if (target.ThingDestroyed)
+                    //    {
+                    //        break;
+                    //    }
+                    //    current.SetAmount(Mathf.Max(1, Mathf.RoundToInt(current.Amount * 0.5f)));
+                    //    target.Thing.TakeDamage(current);
+                        //// We add now a low damaging but highly painfull trauma
+                        //if (current.Def.hediff != null && current.Def.hediff.injuryProps != null)
+                        //{
+                        //    float pain = current.Amount * current.Def.hediff.injuryProps.painPerSeverity;
+                        //    Log.Warning(string.Concat(new object[]
+                        //    {
+                        //        "Before instancing Trauma"
+                        //    }));
+                        //    DamageInfo trauma = new DamageInfo(DamageDefOfMeleeRebalance.Trauma , 0);
+                        //    Log.Warning(string.Concat(new object[]
+                        //    {
+                        //        "After instancing Trauma ",trauma
+                        //    }));
+                        //    trauma.SetAmount(Mathf.Max(1, Mathf.RoundToInt(pain / trauma.Def.hediff.injuryProps.painPerSeverity)));
+                        //    Log.Warning(string.Concat(new object[]
+                        //    {
+                        //        "Before Applying Trauma"
+                        //    }));
+                        //    target.Thing.TakeDamage(trauma);
+                        //    Log.Warning(string.Concat(new object[]
+                        //    {
+                        //        "After Applying Trauma"
+                        //    }));
+                        //}
+                    //}
+                    // We replace all damage by an anesthesize effect
+                    if (target.Thing.def.category == ThingCategory.Pawn)
+                    {
+                        HealthUtility.TryAnesthesize(tpawn);
+                    }
+                    break;
+                case 2: // Stun
+                    // We replace ALL damage by a short stun effect instead
+                    target.Thing.TakeDamage(new DamageInfo(DamageDefOf.Stun, 20));
+                    break;
+                case 3: // Disarm
+                    // We replace ALL damage by removing currently equiped weapon
+                    if (tpawn.equipment != null && tpawn.equipment.Primary != null)
+                    {
+                        ThingWithComps thingwithcomps = new ThingWithComps();
+                        tpawn.equipment.TryDropEquipment(tpawn.equipment.Primary, out thingwithcomps, tpawn.Position);
+                    }
+                    break;
+                default:
+                    Log.Warning(string.Concat(new object[]
+                        {
+                            "Melee Rebalance: Critical Special effect not registered for ", attacker
+                        }));
+                    break;
+            }
+
+        }
     }
+
+    // Pawn_DraftController.GetGizmos() detour
+    // We use a Postfix that adds Gizmos to what Vanilla has generated (Ideally Other Harmony Powered Mods also)
+    [HarmonyPatch(typeof(Pawn_DraftController))]
+    [HarmonyPatch("GetGizmos")]
+    public static class Pawn_DraftControllerGetGizmosPatch
+    {
+        //public static bool Prefix()
+        //{
+        //    int dosomething = 1;
+        //    dosomething++;
+        //    return true;
+        //}
+
+        public static void Postfix(Pawn_DraftController __instance, ref IEnumerable<Gizmo> __result)
+        {
+            // We add the command toggle corresponding to the token in the value
+            Command_Action optF = new Command_Action();
+            MRpawntoken token = MainController.GetPawnToken(__instance.pawn);
+            optF.icon = token.amode.icontex;
+            optF.defaultLabel = token.amode.label;
+            optF.defaultDesc = token.amode.desc;
+            optF.hotKey = KeyBindingDefOf.Misc1; //KeyCode.F;
+            optF.activateSound = SoundDef.Named("Click");
+            optF.action = token.NextAttackMode;
+            optF.groupKey = 313123001;
+            List<Gizmo> list = __result.ToList<Gizmo>();
+            list.Add(optF);
+            __result=(IEnumerable<Gizmo>)list;
+        }
+    }
+
+    //[DefOf]
+    //public static class HediffDefOfMeleeRebalance
+    //{
+    //    public static HediffDef Trauma;
+
+    //}
+
+    //[DefOf]
+    //public static class DamageDefOfMeleeRebalance
+    //{
+    //    public static DamageDef Trauma;
+
+    //}
+
 }

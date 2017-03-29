@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<LanguageData>
+
+	<!-- Melee Attack Mode -->
+	<Meleerebalance_KillLabel>Kill</Meleerebalance_KillLabel>
+	<Meleerebalance_CaptureLabel>Capture</Meleerebalance_CaptureLabel>
+	<Meleerebalance_StunLabel>Stun</Meleerebalance_StunLabel>
+	<Meleerebalance_DisarmLabel>Disarm</Meleerebalance_DisarmLabel>
+	<Meleerebalance_KillDesc>This Pawn will try to inflict maximum damage\n\nThreshold: {0:P0}\nChance: {1:P0}</Meleerebalance_KillDesc>
+	<Meleerebalance_CaptureDesc>This Pawn will do half damage while trying to capture targets\n\nThreshold: {0:P0}\nChance: {1:P0}</Meleerebalance_CaptureDesc>
+	<Meleerebalance_StunDesc>This Pawn will do half damage while trying to stun targets\n\nThreshold: {0:P0}\nChance: {1:P0}</Meleerebalance_StunDesc>
+	<Meleerebalance_DisarmDesc>This Pawn will do no damage while trying to disarm targets\n\nThreshold: {0:P0}\nChance: {1:P0}</Meleerebalance_DisarmDesc>
+	
+</LanguageData>

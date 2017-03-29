@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<Defs>
+
+<!-- Damage definition used to cause maximum pain without harming much -->
+  <DamageDef ParentName="LocalInjuryBase">
+    <defName>Trauma</defName>
+    <label>trauma</label>
+    <externalViolence>true</externalViolence>
+    <deathMessage>{0} has died from massive trauma.</deathMessage>
+    <hediff>Trauma</hediff>
+    <hediffSkin>Trauma</hediffSkin>
+    <hediffSolid>Trauma</hediffSolid>
+    <harmAllLayersUntilOutside>true</harmAllLayersUntilOutside>
+  </DamageDef>
+
+
+</Defs>

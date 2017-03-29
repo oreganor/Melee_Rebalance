@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<HediffDefs>
+
+  <!-- Trauma. Extremely painfull wound that dissapears without treatment. Used to provide pain WITHOUT damaging too much -->
+  
+	<HediffDef ParentName="InjuryBase">
+		<defName>Trauma</defName>
+		<label>trauma</label>
+		<tendable>false</tendable>
+    <comps>
+      <li Class="HediffCompProperties_Disappears">
+        <disappearsAfterTicks>
+          <min>4000</min>
+          <max>6000</max>
+        </disappearsAfterTicks>
+      </li>
+    </comps>
+    <injuryProps>
+      <painPerSeverity>0.1</painPerSeverity>
+      <canMerge>true</canMerge>
+      <destroyedLabel>Crippled</destroyedLabel>
+    </injuryProps>
+	</HediffDef>
+
+</HediffDefs>
