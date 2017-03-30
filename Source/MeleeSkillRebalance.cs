@@ -21,6 +21,8 @@ namespace MeleeRebalance
 
         private static bool worldloaded = false;
 
+        //private static HarmonyInstance harmony;
+
         public void FixedUpdate()
         {
             // We check if the world is loaded to trigger DefererLoader
@@ -43,6 +45,10 @@ namespace MeleeRebalance
                 Attackmodes[i]= new MRattackmode(ContentFinder<Texture2D>.Get(Constants.Icontexpath + Constants.Icontexname[i]),
                     Constants.Labelstring[i].Translate(), string.Format(Constants.Descstring[i].Translate(),Constants.Methresholds[i],
                     Constants.Mechances[i]), Constants.Methresholds[i], Constants.Mechances[i], i);
+                //Log.Warning(string.Concat(new object[]
+                //{
+                //    "Loaded resources for ",Constants.icontexname[i]," Label:", commandLabel[i], " Desc:", commandDesc[i]
+                //}));
             }
         }
 
@@ -55,6 +61,16 @@ namespace MeleeRebalance
             //Initializing Harmony detours
             var harmony = HarmonyInstance.Create("net.oreganor.rimworld.mod.meleerebalance");
             harmony.PatchAll(Assembly.GetExecutingAssembly());
+
+            //var original = typeof(Verb_MeleeAttack).GetMethod("TryCastShot");
+            //var prefix = typeof(VerbMeleeTryCastShotPatch).GetMethod("Prefix");
+            //var postfix = typeof(VerbMeleeTryCastShotPatch).GetMethod("Postfix");
+            //harmony.Patch(original, new HarmonyMethod(prefix), new HarmonyMethod(postfix));
+
+            //original = typeof(Pawn_DraftController).GetMethod("GetGizmos");
+            //prefix = typeof(Pawn_DraftControllerGetGizmosPatch).GetMethod("Prefix");
+            //postfix = typeof(Pawn_DraftControllerGetGizmosPatch).GetMethod("Postfix");
+            //harmony.Patch(original, new HarmonyMethod(prefix), new HarmonyMethod(postfix));
 
             //Adding the controller to the scene
             GameObject controllercontainer = new GameObject(Constants.ControllerName);
@@ -159,8 +175,6 @@ namespace MeleeRebalance
         }
         public void NextAttackMode()
         {
-            // We receive the current mode to be able to reset to the final state when the command button is called from a given source
-            // but applied to different states on a multiselection
             this.amode = MainController.GetNextAttackMode(amode);
             return;
         }
@@ -209,6 +223,12 @@ namespace MeleeRebalance
     [HarmonyPatch("TryCastShot")]
     public static class VerbMeleeTryCastShotPatch
     {
+        //public static void Postfix()
+        //{
+        //    int dosomething = 1;
+        //    dosomething++;
+        //    return;
+        //}
 
         public static bool Prefix(Verb_MeleeAttack __instance, ref bool __result)
         {
@@ -320,6 +340,10 @@ namespace MeleeRebalance
                 dbh = Constants.MaxParryChance;
             }
             float ehc = abh * (1f - dbh);
+            //Log.Warning(string.Concat(new object[]
+            //    {
+            //    attacker,"(BHC ",abh,") tried to hit ",tpawn,"(BHC ",dbh,") with effective hit chance ",ehc," and rolled ",roll
+            //    }));
             if (roll > abh)
             {
                 return 0;
@@ -458,6 +482,40 @@ namespace MeleeRebalance
                     }
                     break;
                 case 1: // Capture
+                    // We do half the damage while waiting for the anesthesic to happen
+                    //foreach (DamageInfo current in (DamageInfosToApply.GetValue<IEnumerable<DamageInfo>>(target)))
+                    //{   
+                    //    if (target.ThingDestroyed)
+                    //    {
+                    //        break;
+                    //    }
+                    //    current.SetAmount(Mathf.Max(1, Mathf.RoundToInt(current.Amount * 0.5f)));
+                    //    target.Thing.TakeDamage(current);
+                        //// We add now a low damaging but highly painfull trauma
+                        //if (current.Def.hediff != null && current.Def.hediff.injuryProps != null)
+                        //{
+                        //    float pain = current.Amount * current.Def.hediff.injuryProps.painPerSeverity;
+                        //    Log.Warning(string.Concat(new object[]
+                        //    {
+                        //        "Before instancing Trauma"
+                        //    }));
+                        //    DamageInfo trauma = new DamageInfo(DamageDefOfMeleeRebalance.Trauma , 0);
+                        //    Log.Warning(string.Concat(new object[]
+                        //    {
+                        //        "After instancing Trauma ",trauma
+                        //    }));
+                        //    trauma.SetAmount(Mathf.Max(1, Mathf.RoundToInt(pain / trauma.Def.hediff.injuryProps.painPerSeverity)));
+                        //    Log.Warning(string.Concat(new object[]
+                        //    {
+                        //        "Before Applying Trauma"
+                        //    }));
+                        //    target.Thing.TakeDamage(trauma);
+                        //    Log.Warning(string.Concat(new object[]
+                        //    {
+                        //        "After Applying Trauma"
+                        //    }));
+                        //}
+                    //}
                     // We replace all damage by an anesthesize effect
                     if (target.Thing.def.category == ThingCategory.Pawn)
                     {
@@ -533,4 +591,19 @@ namespace MeleeRebalance
             __result=(IEnumerable<Gizmo>)list;
         }
     }
+
+    //[DefOf]
+    //public static class HediffDefOfMeleeRebalance
+    //{
+    //    public static HediffDef Trauma;
+
+    //}
+
+    //[DefOf]
+    //public static class DamageDefOfMeleeRebalance
+    //{
+    //    public static DamageDef Trauma;
+
+    //}
+
 }
