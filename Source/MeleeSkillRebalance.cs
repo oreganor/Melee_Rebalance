@@ -40,9 +40,9 @@ namespace MeleeRebalance
             //Loading Textures & translations after init
             for (int i = 0; i < Constants.Maxspecialeffects; i++)
             {
-                Attackmodes[i]= new MRattackmode(ContentFinder<Texture2D>.Get(Constants.icontexpath + Constants.icontexname[i]),
-                    Constants.labelstring[i].Translate(), string.Format(Constants.descstring[i].Translate(),Constants.methresholds[i],
-                    Constants.mechances[i]), Constants.methresholds[i], Constants.mechances[i], i);
+                Attackmodes[i]= new MRattackmode(ContentFinder<Texture2D>.Get(Constants.Icontexpath + Constants.Icontexname[i]),
+                    Constants.Labelstring[i].Translate(), string.Format(Constants.Descstring[i].Translate(),Constants.Methresholds[i],
+                    Constants.Mechances[i]), Constants.Methresholds[i], Constants.Mechances[i], i);
             }
         }
 
@@ -159,6 +159,8 @@ namespace MeleeRebalance
         }
         public void NextAttackMode()
         {
+            // We receive the current mode to be able to reset to the final state when the command button is called from a given source
+            // but applied to different states on a multiselection
             this.amode = MainController.GetNextAttackMode(amode);
             return;
         }
@@ -190,14 +192,15 @@ namespace MeleeRebalance
         public const float ParryCounterPenalty = 0.25f;
         public const string ControllerName = "MeleeRebalanceController";
         public const int Maxspecialeffects = 4;
-        public const string icontexpath = "Commands/";
-        public static string[] icontexname = { "UI_Kill", "UI_Capture", "UI_Stun", "UI_Disarm" };
-        public static string[] labelstring = {"Meleerebalance_KillLabel", "Meleerebalance_CaptureLabel",
+        public const string Icontexpath = "Commands/";
+        public static string[] Icontexname = { "UI_Kill", "UI_Capture", "UI_Stun", "UI_Disarm" };
+        public static string[] Labelstring = {"Meleerebalance_KillLabel", "Meleerebalance_CaptureLabel",
             "Meleerebalance_StunLabel", "Meleerebalance_DisarmLabel"};
-        public static string[] descstring = {"Meleerebalance_KillDesc", "Meleerebalance_CaptureDesc",
+        public static string[] Descstring = {"Meleerebalance_KillDesc", "Meleerebalance_CaptureDesc",
             "Meleerebalance_StunDesc", "Meleerebalance_DisarmDesc"};
-        public static float[] methresholds = { 0.20f, 0.40f, 0.30f, 0.30f };
-        public static float[] mechances = { 1f / 3f, 1f / 4f, 1f / 3f, 1f / 3f };
+        public static float[] Methresholds = { 0.20f, 0.40f, 0.30f, 0.30f };
+        public static float[] Mechances = { 1f / 3f, 1f / 4f, 1f / 3f, 1f / 3f };
+        public static int CommandGroupKey = 23128736;
     }
 
     // Verb_MeleeAttack Detour
@@ -483,6 +486,30 @@ namespace MeleeRebalance
         }
     }
 
+    public class AttackModeCommand : Command_Action
+    {
+        private MRpawntoken token;
+
+        public AttackModeCommand(MRpawntoken token)
+        {
+            this.token = token;
+        }
+
+        public void UpdateMode(MRattackmode amode)
+        {
+            this.token.amode = amode;
+        }
+
+        public override bool InheritInteractionsFrom(Gizmo other)
+        {
+            // When grouped pawns receive an order the resulting state will be applied to all of them
+            // So first thing to do after a click is equalizing the sate of all of them
+            // And then execute the default action on each
+            (other as AttackModeCommand).UpdateMode(this.token.amode);
+            return true;
+        }
+    }
+
     // Pawn_DraftController.GetGizmos() detour
     // We use a Postfix that adds Gizmos to what Vanilla has generated (Ideally Other Harmony Powered Mods also)
     [HarmonyPatch(typeof(Pawn_DraftController))]
@@ -492,15 +519,15 @@ namespace MeleeRebalance
         public static void Postfix(Pawn_DraftController __instance, ref IEnumerable<Gizmo> __result)
         {
             // We add the command toggle corresponding to the token in the value
-            Command_Action optF = new Command_Action();
             MRpawntoken token = MainController.GetPawnToken(__instance.pawn);
+            AttackModeCommand optF = new AttackModeCommand(token);
             optF.icon = token.amode.icontex;
             optF.defaultLabel = token.amode.label;
             optF.defaultDesc = token.amode.desc;
-            optF.hotKey = KeyBindingDefOf.Misc1; //KeyCode.F;
+            optF.hotKey = KeyBindingDefOf.Misc7;
             optF.activateSound = SoundDef.Named("Click");
             optF.action = token.NextAttackMode;
-            optF.groupKey = 313123001;
+            optF.groupKey = Constants.CommandGroupKey;
             List<Gizmo> list = __result.ToList<Gizmo>();
             list.Add(optF);
             __result=(IEnumerable<Gizmo>)list;
