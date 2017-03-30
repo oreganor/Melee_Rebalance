@@ -159,6 +159,8 @@ namespace MeleeRebalance
         }
         public void NextAttackMode()
         {
+            // We receive the current mode to be able to reset to the final state when the command button is called from a given source
+            // but applied to different states on a multiselection
             this.amode = MainController.GetNextAttackMode(amode);
             return;
         }
