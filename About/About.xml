@@ -10,31 +10,56 @@
 	
 - Created a "Parry" mechanic as a 3rd result on any melee attempted. The chance a regular hit turns into a "Parry" is based on the Melee Chance of the target. A parried attack has different effects on its target based on a few factors:
 	
-	* If the target is wearing any piece of Apparel able to absorb damage, the full damage of the attack will be absorbed by it. Vanilla Personal Shields are an example of this change, they will try to absorb the damage of a melee attack that's parried.
+* If the target is wearing any piece of Apparel able to absorb damage, the full damage of the attack will be absorbed by it. Vanilla Personal Shields are an example of this change, they will try to absorb the damage of a melee attack that's parried.
 	
-	* If the target is wielding a Melee Weapon, no wound will be suffered but the Weapon will loose HP as a fraction of the attack damage. This fraction is reduced the higher the Melee Chance of the target. The weapon will be dropped into nearby ground if the absorbed damage from the hit would have destroyed it. If there is no room to drop the weapon nearby, it will be destroyed instead.
+* If the target is wielding a Melee Weapon, no wound will be suffered but the Weapon will loose HP as a fraction of the attack damage. This fraction is reduced the higher the Melee Chance of the target. The weapon will be dropped into nearby ground if the absorbed damage from the hit would have destroyed it. If there is no room to drop the weapon nearby, it will be destroyed instead.
 	
-	* An unarmed target will suffer half the damage on a Parry. A pawn wielding a Ranged Weapon falls on this category also.
+* An unarmed target will suffer half the damage on a Parry. A pawn wielding a Ranged Weapon falls on this category also.
 	
-	* Parry chances are reduced the more parries a pawn does between his/her melee attacks.
+* Parry chances are reduced the more parries a pawn does between his/her melee attacks.
+	
+- Pawns have a Melee Mode order players can change. Each mode modifies regular hits and have a chance ("Chance" in Mode tooltip) to trigger a special effect. For a special effect to happen the Pawn has to have effective hit chances equal or higher than the inherent difficulty of the stance ("Threshold" in the tooltip). The current modes are:
+
+* Kill: Regular Damage on normal hits. Double damage on Special effect.
+	
+* Capture: Half Damage on normal hits. "Anesthezise" Incapacitation on Special effect.
+	
+* Stun: Half Damage on normal hits. Short stun on Special effect.
+	
+* Disarm: No Damage on normal hits. Enemy weapon droped to the ground on Special effect.
 
 
 = ACKNOWLEDGEMENTS =
 pardeike: Without Harmony, gracefull detouring wouldn't have been possible.
+haplo: For inspiration on how to make my own art and for his excellent tutorial on modding.
+
 
 = INCOMPATIBILITIES =
-The bulk of current modifications are based on detouring Rimworld.Verb_MeleeAttack.TryCastShot() method. The Detour is done using a Harmony Prefix (Currently in Stop Execution Mode) meaning compatibility with other Mods that use Harmony is doable with minimum effort from my part. There are also changes on defs, but are external and easy to integrate as patches.
+Currently this mod Detours 2 Vanilla methods using Harmony Library:
+- Rimworld.Verb_MeleeAttack.TryCastShot()
+- Rimworld.Pawn_DraftController.GetGizmos()
+
+Due to Detour collision Pawn Attack Mode button is suppressed if the Mod "Defensive Possitions" is active. Pawns will default to "Kill mode".
 	
 ATM the mod leaves no traces on your savegame, meaning it's safe to use on an ongoing game and safe to be removed without further considerations.
-	
+
+
+= KNOWN ISSUES =
+- Parry counters are reseted on reloading.
+- Attack Mode settings are reseted to "Kill" on reloading.
+
 
 = TODO =
 
-- Melee Combat toggle buttons to customize Pawn behaviour regarding "safety" while meleeing and/or allowing different "Attack Modes".
+- Make this mod fully compatible with other mods that do not relay on Harmony without user patches.
 
-- Parry Chance Stat. As a standalone so apparel/traits can affect defensive chances independently of offensive chances.
+- Parry Chance Stat. as a standalone so apparel/traits can affect defensive chances independently of offensive chances.
 
 - Better Sounds/Visual notifications when a Parry happens.
+
+- Better Sounds/Visual notifications when a Special effect happens.
+
+- Make AI better at selecting which Attack mode to use. ATM they default to "Kill Mode".
 
 
 = POWERED BY =
