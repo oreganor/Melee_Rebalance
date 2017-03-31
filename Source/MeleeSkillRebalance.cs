@@ -21,7 +21,7 @@ namespace MeleeRebalance
 
         private static bool worldloaded = false;
 
-        //private static HarmonyInstance harmony;
+        private static HarmonyInstance harmony;
 
         public void FixedUpdate()
         {
@@ -59,18 +59,54 @@ namespace MeleeRebalance
             Pawntokens = new List<MRpawntoken>();
 
             //Initializing Harmony detours
-            var harmony = HarmonyInstance.Create("net.oreganor.rimworld.mod.meleerebalance");
-            harmony.PatchAll(Assembly.GetExecutingAssembly());
+            harmony = HarmonyInstance.Create("net.oreganor.rimworld.mod.meleerebalance");
 
-            //var original = typeof(Verb_MeleeAttack).GetMethod("TryCastShot");
-            //var prefix = typeof(VerbMeleeTryCastShotPatch).GetMethod("Prefix");
-            //var postfix = typeof(VerbMeleeTryCastShotPatch).GetMethod("Postfix");
-            //harmony.Patch(original, new HarmonyMethod(prefix), new HarmonyMethod(postfix));
+            var original = typeof(Verb_MeleeAttack).GetMethod("TryCastShot", Constants.BindF);
+            var detour = typeof(VerbMeleeTryCastShotPatch).GetMethod("Prefix");
+            harmony.Patch(original, new HarmonyMethod(detour), new HarmonyMethod(null));
 
-            //original = typeof(Pawn_DraftController).GetMethod("GetGizmos");
-            //prefix = typeof(Pawn_DraftControllerGetGizmosPatch).GetMethod("Prefix");
-            //postfix = typeof(Pawn_DraftControllerGetGizmosPatch).GetMethod("Postfix");
-            //harmony.Patch(original, new HarmonyMethod(prefix), new HarmonyMethod(postfix));
+            //We check for the pressence of Defensive Possitions
+            original = null;
+            foreach (ModMetaData current in ModsConfig.ActiveModsInLoadOrder.ToList<ModMetaData>())
+            {
+                if (current.Identifier.Equals(Constants.DefensivePositionsFolder))
+                {
+                    Log.Warning(string.Concat(new object[]
+                    {
+                    "Melee Rebalance: Defensive Possitions Mod active. Adapting Detours."
+                    }));
+                    foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+                    {
+                        Type type = assembly.GetType("DefensivePositions.DraftControllerDetour");
+                        if (type != null)
+                        {
+                            Log.Warning(string.Concat(new object[]
+                            {
+                                    "Melee Rebalance: Found right spot inside Defensive Positions"
+                            }));
+                            original = type.GetMethod("_GetGizmos", Constants.BindF);
+                            if (original != null)
+                            {
+                                Log.Warning(string.Concat(new object[]
+                                {
+                                    "Melee Rebalance: Detours successfully adapted to Defensive Positions'"
+                                }));
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            if (original == null)
+            {
+                original = typeof(Pawn_DraftController).GetMethod("GetGizmos", Constants.BindF);
+                detour = typeof(DraftControllerGetGizmosPatch).GetMethod("Postfix");
+            }
+            else
+            {
+                detour = typeof(DraftControllerDPDetourGetGizmosPatch).GetMethod("Postfix");
+            }
+             harmony.Patch(original, new HarmonyMethod(null), new HarmonyMethod(detour));
 
             //Adding the controller to the scene
             GameObject controllercontainer = new GameObject(Constants.ControllerName);
@@ -215,6 +251,8 @@ namespace MeleeRebalance
         public static float[] Methresholds = { 0.20f, 0.40f, 0.30f, 0.30f };
         public static float[] Mechances = { 1f / 3f, 1f / 4f, 1f / 3f, 1f / 3f };
         public static int CommandGroupKey = 23128736;
+        public static BindingFlags BindF = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static;
+        public static string DefensivePositionsFolder = "DefensivePositions";
     }
 
     // Verb_MeleeAttack Detour
@@ -551,6 +589,13 @@ namespace MeleeRebalance
         public AttackModeCommand(MRpawntoken token)
         {
             this.token = token;
+            this.icon = token.amode.icontex;
+            this.defaultLabel = token.amode.label;
+            this.defaultDesc = token.amode.desc;
+            this.hotKey = KeyBindingDefOf.Misc7;
+            this.activateSound = SoundDef.Named("Click");
+            this.action = token.NextAttackMode;
+            this.groupKey = Constants.CommandGroupKey;
         }
 
         public void UpdateMode(MRattackmode amode)
@@ -570,25 +615,32 @@ namespace MeleeRebalance
 
     // Pawn_DraftController.GetGizmos() detour
     // We use a Postfix that adds Gizmos to what Vanilla has generated (Ideally Other Harmony Powered Mods also)
-    [HarmonyPatch(typeof(Pawn_DraftController))]
-    [HarmonyPatch("GetGizmos")]
-    public static class Pawn_DraftControllerGetGizmosPatch
+    //[HarmonyPatch(typeof(Pawn_DraftController))]
+    //[HarmonyPatch("GetGizmos")]
+    public static class DraftControllerGetGizmosPatch
     {
         public static void Postfix(Pawn_DraftController __instance, ref IEnumerable<Gizmo> __result)
         {
             // We add the command toggle corresponding to the token in the value
             MRpawntoken token = MainController.GetPawnToken(__instance.pawn);
             AttackModeCommand optF = new AttackModeCommand(token);
-            optF.icon = token.amode.icontex;
-            optF.defaultLabel = token.amode.label;
-            optF.defaultDesc = token.amode.desc;
-            optF.hotKey = KeyBindingDefOf.Misc7;
-            optF.activateSound = SoundDef.Named("Click");
-            optF.action = token.NextAttackMode;
-            optF.groupKey = Constants.CommandGroupKey;
             List<Gizmo> list = __result.ToList<Gizmo>();
             list.Add(optF);
-            __result=(IEnumerable<Gizmo>)list;
+            __result = (IEnumerable<Gizmo>)list;
+        }
+    }
+
+    // The patch version for Defensive Positions Detour, which is a static method
+    public static class DraftControllerDPDetourGetGizmosPatch
+    {
+        public static void Postfix(Pawn_DraftController controller, ref IEnumerable<Gizmo> __result)
+        {
+            // We add the command toggle corresponding to the token in the value
+            MRpawntoken token = MainController.GetPawnToken(controller.pawn);
+            AttackModeCommand optF = new AttackModeCommand(token);
+            List<Gizmo> list = __result.ToList<Gizmo>();
+            list.Add(optF);
+            __result = (IEnumerable<Gizmo>)list;
         }
     }
 
