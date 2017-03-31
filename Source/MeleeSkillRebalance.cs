@@ -21,6 +21,8 @@ namespace MeleeRebalance
 
         private static bool worldloaded = false;
 
+        private static HarmonyInstance harmony;
+
         public void FixedUpdate()
         {
             // We check if the world is loaded to trigger DefererLoader
