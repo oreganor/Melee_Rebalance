@@ -38,8 +38,6 @@ haplo: For inspiration on how to make my own art and for his excellent tutorial 
 Currently this mod Detours 2 Vanilla methods using Harmony Library:
 - Rimworld.Verb_MeleeAttack.TryCastShot()
 - Rimworld.Pawn_DraftController.GetGizmos()
-
-Due to Detour collision Pawn Attack Mode button is suppressed if the Mod "Defensive Possitions" is active. Pawns will default to "Kill mode".
 	
 ATM the mod leaves no traces on your savegame, meaning it's safe to use on an ongoing game and safe to be removed without further considerations.
 
@@ -47,19 +45,6 @@ ATM the mod leaves no traces on your savegame, meaning it's safe to use on an on
 = KNOWN ISSUES =
 - Parry counters are reseted on reloading.
 - Attack Mode settings are reseted to "Kill" on reloading.
-
-
-= TODO =
-
-- Make this mod fully compatible with other mods that do not relay on Harmony without user patches.
-
-- Parry Chance Stat. as a standalone so apparel/traits can affect defensive chances independently of offensive chances.
-
-- Better Sounds/Visual notifications when a Parry happens.
-
-- Better Sounds/Visual notifications when a Special effect happens.
-
-- Make AI better at selecting which Attack mode to use. ATM they default to "Kill Mode".
 
 
 = POWERED BY =
