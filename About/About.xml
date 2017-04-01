@@ -8,6 +8,7 @@
 	
 - Altered skill progression/curves/defaults so what appears in-game tooltips as Melee Chance gets closer to real chances to land a hit on the enemy. The overall effect sought is that highly skilled fighters become deadlier while low skill fighters become much worse at dealing melee damage compared to Vanilla. Non Skilled entities will show their 60% chance to hit, as it was already the case inside the melee evaluation code. Their combat effectiveness will change based on their current health status.
 	
+
 - Created a "Parry" mechanic as a 3rd result on any melee attempted. The chance a regular hit turns into a "Parry" is based on the Melee Chance of the target. A parried attack has different effects on its target based on a few factors:
 	
 * If the target is wearing any piece of Apparel able to absorb damage, the full damage of the attack will be absorbed by it. Vanilla Personal Shields are an example of this change, they will try to absorb the damage of a melee attack that's parried.
@@ -18,6 +19,7 @@
 	
 * Parry chances are reduced the more parries a pawn does between his/her melee attacks.
 	
+
 - Pawns have a Melee Mode order players can change. Each mode modifies regular hits and have a chance ("Chance" in Mode tooltip) to trigger a special effect. For a special effect to happen the Pawn has to have effective hit chances equal or higher than the inherent difficulty of the stance ("Threshold" in the tooltip). The current modes are:
 
 * Kill: Regular Damage on normal hits. Double damage on Special effect.
@@ -45,6 +47,7 @@ ATM the mod leaves no traces on your savegame, meaning it's safe to use on an on
 = KNOWN ISSUES =
 - Parry counters are reseted on reloading.
 - Attack Mode settings are reseted to "Kill" on reloading.
+- Special Effect chances overlays linger after combat ends.
 
 
 = POWERED BY =
