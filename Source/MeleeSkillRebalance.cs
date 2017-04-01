@@ -390,10 +390,6 @@ namespace MeleeRebalance
                 dbh = Constants.MaxParryChance;
             }
             atoken.ehc = abh * (1f - dbh);
-            //Log.Warning(string.Concat(new object[]
-            //    {
-            //    attacker,"(BHC ",abh,") tried to hit ",tpawn,"(BHC ",dbh,") with effective hit chance ",atoken.ehc," and rolled ",roll
-            //    }));
             if (roll > abh)
             {
                 return 0;
