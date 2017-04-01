@@ -10,5 +10,7 @@
 	<Meleerebalance_CaptureDesc>This Pawn will do half damage while trying to capture targets\n\nThreshold: {0:P0}\nChance: {1:P0}</Meleerebalance_CaptureDesc>
 	<Meleerebalance_StunDesc>This Pawn will do half damage while trying to stun targets\n\nThreshold: {0:P0}\nChance: {1:P0}</Meleerebalance_StunDesc>
 	<Meleerebalance_DisarmDesc>This Pawn will do no damage while trying to disarm targets\n\nThreshold: {0:P0}\nChance: {1:P0}</Meleerebalance_DisarmDesc>
+	<Meleerebalance_NoChanceDesc>\n\nNo Special Effect</Meleerebalance_NoChanceDesc>
+	<Meleerebalance_LowChanceDesc>\n\nRare Special Effect</Meleerebalance_LowChanceDesc>
 	
 </LanguageData>

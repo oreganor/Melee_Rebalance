@@ -23,6 +23,14 @@ namespace MeleeRebalance
 
         private static HarmonyInstance harmony;
 
+        public static Texture2D LowChance;
+
+        public static Texture2D NoChance;
+
+        public static string LowChanceDesc;
+
+        public static string NoChanceDesc;
+
         public void FixedUpdate()
         {
             // We check if the world is loaded to trigger DefererLoader
@@ -50,22 +58,26 @@ namespace MeleeRebalance
                 //    "Loaded resources for ",Constants.icontexname[i]," Label:", commandLabel[i], " Desc:", commandDesc[i]
                 //}));
             }
+            LowChance = ContentFinder<Texture2D>.Get(Constants.Icontexpath + Constants.LowChanceTex);
+            NoChance = ContentFinder<Texture2D>.Get(Constants.Icontexpath + Constants.NoChanceTex);
+            LowChanceDesc = string.Format(Constants.LowChanceDesc.Translate());
+            NoChanceDesc = string.Format(Constants.NoChanceDesc.Translate());
         }
 
         static MainController()
         {
-
             //Initializing Monitorized pawn list
             Pawntokens = new List<MRpawntoken>();
 
-            //Initializing Harmony detours
+            //Registering Assembly into Harmony database
             harmony = HarmonyInstance.Create("net.oreganor.rimworld.mod.meleerebalance");
 
+            //Applying Detours
             var original = typeof(Verb_MeleeAttack).GetMethod("TryCastShot", Constants.BindF);
             var detour = typeof(VerbMeleeTryCastShotPatch).GetMethod("Prefix");
             harmony.Patch(original, new HarmonyMethod(detour), new HarmonyMethod(null));
 
-            //We check for the pressence of Defensive Possitions
+            //We check for the pressence of Defensive Positions
             original = null;
             foreach (ModMetaData current in ModsConfig.ActiveModsInLoadOrder.ToList<ModMetaData>())
             {
@@ -117,7 +129,7 @@ namespace MeleeRebalance
 
         public static void ResetParryCounter(Pawn pawn)
         {
-            // We scan the list for a reference to the pawn, cleaning all null reference
+            // We scan the list for a reference to the pawn, cleaning all null references
             // If we find the pawn we reset the counter
             foreach (MRpawntoken p in Pawntokens)
             {
@@ -201,11 +213,13 @@ namespace MeleeRebalance
     public class MRpawntoken
     {
         public int counter;
+        public float ehc; // Effective Hit Chance of the last melee attack
         public MRattackmode amode;
         public Pawn pawn;
         public MRpawntoken(Pawn pawn)
         {
             this.counter = 0;
+            this.ehc = 1f;
             this.amode = MainController.GetNextAttackMode(null);
             this.pawn = pawn;
         }
@@ -240,6 +254,7 @@ namespace MeleeRebalance
         public const float MaxParryChance = 0.9f;
         public const float ParryReduction = 0.5f;
         public const float ParryCounterPenalty = 0.25f;
+        public const float LowSpecialEffectChance = 1f/6f;
         public const string ControllerName = "MeleeRebalanceController";
         public const int Maxspecialeffects = 4;
         public const string Icontexpath = "Commands/";
@@ -248,11 +263,15 @@ namespace MeleeRebalance
             "Meleerebalance_StunLabel", "Meleerebalance_DisarmLabel"};
         public static string[] Descstring = {"Meleerebalance_KillDesc", "Meleerebalance_CaptureDesc",
             "Meleerebalance_StunDesc", "Meleerebalance_DisarmDesc"};
+        public const string NoChanceDesc = "Meleerebalance_NoChanceDesc";
+        public const string LowChanceDesc = "Meleerebalance_LowChanceDesc";
         public static float[] Methresholds = { 0.20f, 0.40f, 0.30f, 0.30f };
         public static float[] Mechances = { 1f / 3f, 1f / 4f, 1f / 3f, 1f / 3f };
-        public static int CommandGroupKey = 23128736;
+        public const int CommandGroupKey = 23128736;
         public static BindingFlags BindF = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static;
-        public static string DefensivePositionsFolder = "DefensivePositions";
+        public const string DefensivePositionsFolder = "DefensivePositions";
+        public const string LowChanceTex = "UI_Overlay_LowChance";
+        public const string NoChanceTex = "UI_Overlay_NoChance";
     }
 
     // Verb_MeleeAttack Detour
@@ -351,14 +370,17 @@ namespace MeleeRebalance
             // We generate the result of a melee attack based on skills involved and some extra factors
             // 0: Miss, 1: Hit, 2: Parry, 3: Critical
             // Surprise attacks ALWAYS hit
+            MRpawntoken atoken = MainController.GetPawnToken(attacker);
             if (surprise)
             {
+                atoken.ehc = 1f;
                 return 1;
             }
             // Attacks against immobile/downed targets or things that aren't pawns ALWAYS hit and can't trigger special effects
             Pawn tpawn = defender as Pawn;
             if (defender.def.category != ThingCategory.Pawn || tpawn.Downed || tpawn.GetPosture() != PawnPosture.Standing)
             {
+                atoken.ehc = 1f;
                 return 1;
             }
             // Against regular targets the effective melee skill of the defender reduces multiplicatively the chance to hit of the attacker.
@@ -366,9 +388,9 @@ namespace MeleeRebalance
             float roll = Rand.Value;
             float abh = attacker.GetStatValue(StatDefOf.MeleeHitChance, true);
             float dbh = tpawn.GetStatValue(StatDefOf.MeleeHitChance, true);
-            MRpawntoken token = MainController.GetPawnToken(tpawn);
+            MRpawntoken dtoken = MainController.GetPawnToken(tpawn);
             // We reduce the base defensive skill based on the registered parry counters for target pawn.
-            dbh -= Constants.ParryCounterPenalty * (float)token.counter;
+            dbh -= Constants.ParryCounterPenalty * (float)dtoken.counter;
             if (dbh < 0f)
             {
                 dbh = 0f;
@@ -377,10 +399,10 @@ namespace MeleeRebalance
             {
                 dbh = Constants.MaxParryChance;
             }
-            float ehc = abh * (1f - dbh);
+            atoken.ehc = abh * (1f - dbh);
             //Log.Warning(string.Concat(new object[]
             //    {
-            //    attacker,"(BHC ",abh,") tried to hit ",tpawn,"(BHC ",dbh,") with effective hit chance ",ehc," and rolled ",roll
+            //    attacker,"(BHC ",abh,") tried to hit ",tpawn,"(BHC ",dbh,") with effective hit chance ",atoken.ehc," and rolled ",roll
             //    }));
             if (roll > abh)
             {
@@ -389,14 +411,13 @@ namespace MeleeRebalance
             else
             {
                 // The attempt was not a miss so we increase the parry counters of the target
-                token.counter++;
+                dtoken.counter++;
                 // Now we check for critical effects
-                token = MainController.GetPawnToken(attacker);
-                if (ehc > token.amode.threshold && roll <= (ehc * token.amode.chance))
+                if ((atoken.ehc > atoken.amode.threshold) && (roll <= (atoken.ehc * atoken.amode.chance)))
                 {
                     return 3;
                 }
-                if (roll <= ehc)
+                if (roll <= atoken.ehc)
                 {
                     return 1;
                 }
@@ -520,7 +541,7 @@ namespace MeleeRebalance
                     }
                     break;
                 case 1: // Capture
-                    // We do half the damage while waiting for the anesthesic to happen
+                    // We do half damage on regular hits waiting to trigger Trauma
                     //foreach (DamageInfo current in (DamageInfosToApply.GetValue<IEnumerable<DamageInfo>>(target)))
                     //{   
                     //    if (target.ThingDestroyed)
@@ -584,11 +605,11 @@ namespace MeleeRebalance
 
     public class AttackModeCommand : Command_Action
     {
-        private MRpawntoken token;
+        private MRpawntoken Token;
 
         public AttackModeCommand(MRpawntoken token)
         {
-            this.token = token;
+            this.Token = token;
             this.icon = token.amode.icontex;
             this.defaultLabel = token.amode.label;
             this.defaultDesc = token.amode.desc;
@@ -600,7 +621,43 @@ namespace MeleeRebalance
 
         public void UpdateMode(MRattackmode amode)
         {
-            this.token.amode = amode;
+            this.Token.amode = amode;
+        }
+
+        public override GizmoResult GizmoOnGUI(Vector2 topLeft)
+        {
+            GizmoResult result;
+            // We add an extra overlay based on last effective hit chance stored into the token compared with the threshold of the current and with the
+            // chance to trigger the special effect. Descriptions have to be updated BEFORE calling the base method.
+            Rect rect = new Rect(topLeft.x, topLeft.y, this.Width, 75f);
+            // If the pawn isn't drafted we take the chance to reset ehc to remove the overlay
+            if (!Token.pawn.Drafted)
+            {
+                Token.ehc = 1f;
+            }
+            if (Token.ehc >= Token.amode.threshold)
+            {
+                if((Token.ehc * Token.amode.chance) < Constants.LowSpecialEffectChance)
+                {
+                    // Low chance to trigger Special Effect
+                    this.defaultDesc += MainController.LowChanceDesc;
+                    result = base.GizmoOnGUI(topLeft);
+                    GUI.DrawTexture(rect, MainController.LowChance);
+
+                }
+                else
+                {
+                    result = base.GizmoOnGUI(topLeft);
+                }
+            }
+            else
+            {
+                // No chance to trigger Special Effect
+                this.defaultDesc += MainController.NoChanceDesc;
+                result = base.GizmoOnGUI(topLeft);
+                GUI.DrawTexture(rect, MainController.NoChance);
+            }
+            return result;
         }
 
         public override bool InheritInteractionsFrom(Gizmo other)
@@ -608,7 +665,7 @@ namespace MeleeRebalance
             // When grouped pawns receive an order the resulting state will be applied to all of them
             // So first thing to do after a click is equalizing the sate of all of them
             // And then execute the default action on each
-            (other as AttackModeCommand).UpdateMode(this.token.amode);
+            (other as AttackModeCommand).UpdateMode(this.Token.amode);
             return true;
         }
     }
