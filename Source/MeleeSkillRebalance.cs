@@ -17,7 +17,7 @@ namespace MeleeRebalance
     {
         private static List<MRpawntoken> Pawntokens { get; set; }
 
-        private static MRattackmode[] Attackmodes { get; set; }
+        public static MRattackmode[] Attackmodes { get; set; }
 
         private static bool worldloaded = false;
 
@@ -228,6 +228,44 @@ namespace MeleeRebalance
             this.amode = MainController.GetNextAttackMode(amode);
             return;
         }
+        public void ChooseAttackMode(Pawn target)
+        {   
+            if (pawn.RaceProps.Humanlike)
+            {
+                // Rational pawns will try to use modes that have a reallistic chance to apply its effect
+                // Pending generalization: 0 kill, 1 capture, 2 stun, 3 disarm
+                // If we have a decent chance to capture, we go for it 1st
+                if (MainController.Attackmodes[1].HasGoodChances(ehc))
+                {
+                    amode = MainController.Attackmodes[1];
+                    return;
+                }
+                // Target driven decissions
+                if (target != null)
+                {
+                    // We try to stun if the target isn't
+                    if (MainController.Attackmodes[2].HasGoodChances(ehc))
+                    {
+                        if (target.stances != null && !target.stances.stunner.Stunned )
+                        {
+                            amode = MainController.Attackmodes[2];
+                            return;
+                        }
+                    }
+                    // We try to disarm if the target carries a weapon
+                    if (MainController.Attackmodes[3].HasGoodChances(ehc))
+                    {
+                        if (target.equipment != null && target.equipment.Primary != null && target.equipment.Primary.def.IsWeapon)
+                        {
+                            amode = MainController.Attackmodes[3];
+                            return;
+                        }
+                    }
+                }
+            }
+            amode = MainController.Attackmodes[0];
+            return;
+        }
     }
 
     public class MRattackmode
@@ -247,13 +285,32 @@ namespace MeleeRebalance
             this.chance = chance;
             this.solver = solver;
         }
+        public bool CanTriggerSE(float ehc)
+        {
+            if(ehc >= threshold)
+            {
+                return true;
+            }
+            return false;
+        }
+        public bool HasGoodChances(float ehc)
+        {
+            if(CanTriggerSE(ehc))
+            {
+                if((ehc * chance) >= Constants.LowSpecialEffectChance)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
     }
 
     static class Constants
     {
         public const float MaxParryChance = 0.9f;
         public const float ParryReduction = 0.5f;
-        public const float ParryCounterPenalty = 0.25f;
+        public const float ParryCounterPenalty = 0.20f;
         public const float LowSpecialEffectChance = 1f/6f;
         public const string ControllerName = "MeleeRebalanceController";
         public const int Maxspecialeffects = 4;
@@ -265,8 +322,8 @@ namespace MeleeRebalance
             "Meleerebalance_StunDesc", "Meleerebalance_DisarmDesc"};
         public const string NoChanceDesc = "Meleerebalance_NoChanceDesc";
         public const string LowChanceDesc = "Meleerebalance_LowChanceDesc";
-        public static float[] Methresholds = { 0.20f, 0.40f, 0.30f, 0.30f };
-        public static float[] Mechances = { 1f / 3f, 1f / 4f, 1f / 3f, 1f / 3f };
+        public static float[] Methresholds = { 0.15f, 0.55f, 0.25f, 0.45f };
+        public static float[] Mechances = { 1f / 4f, 1f / 4f, 1f / 2.5f, 1f / 3f };
         public const int CommandGroupKey = 23128736;
         public static BindingFlags BindF = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static;
         public const string DefensivePositionsFolder = "DefensivePositions";
@@ -400,10 +457,17 @@ namespace MeleeRebalance
                 dbh = Constants.MaxParryChance;
             }
             atoken.ehc = abh * (1f - dbh);
+
             //Log.Warning(string.Concat(new object[]
             //    {
             //    attacker,"(BHC ",abh,") tried to hit ",tpawn,"(BHC ",dbh,") with effective hit chance ",atoken.ehc," and rolled ",roll
             //    }));
+
+            // If the attacker is NOT a player controller entity we choose the attack mode
+            if (!attacker.IsColonistPlayerControlled)
+            {
+                atoken.ChooseAttackMode(tpawn);
+            }
             if (roll > abh)
             {
                 return 0;
@@ -538,6 +602,12 @@ namespace MeleeRebalance
                         }
                         current.SetAmount(Mathf.Max(1, Mathf.RoundToInt(current.Amount * 2f)));
                         target.Thing.TakeDamage(current);
+
+                        Log.Warning(string.Concat(new object[]
+                        {
+                            "Melee Rebalance: ", attacker," CRITTED ", tpawn
+                        }));
+
                     }
                     break;
                 case 1: // Capture
@@ -579,11 +649,23 @@ namespace MeleeRebalance
                     if (target.Thing.def.category == ThingCategory.Pawn)
                     {
                         HealthUtility.TryAnesthesize(tpawn);
+
+                        Log.Warning(string.Concat(new object[]
+                        {
+                            "Melee Rebalance: ", attacker," CAPTURED ", tpawn
+                        }));
+
                     }
                     break;
                 case 2: // Stun
                     // We replace ALL damage by a short stun effect instead
                     target.Thing.TakeDamage(new DamageInfo(DamageDefOf.Stun, 20));
+
+                    Log.Warning(string.Concat(new object[]
+                    {
+                            "Melee Rebalance: ", attacker," STUNNED ", tpawn
+                    }));
+
                     break;
                 case 3: // Disarm
                     // We replace ALL damage by removing currently equiped weapon
@@ -591,6 +673,12 @@ namespace MeleeRebalance
                     {
                         ThingWithComps thingwithcomps = new ThingWithComps();
                         tpawn.equipment.TryDropEquipment(tpawn.equipment.Primary, out thingwithcomps, tpawn.Position);
+
+                        Log.Warning(string.Concat(new object[]
+                        {
+                            "Melee Rebalance: ", attacker," DISARMED ", tpawn
+                        }));
+                  
                     }
                     break;
                 default:
@@ -635,9 +723,9 @@ namespace MeleeRebalance
             {
                 Token.ehc = 1f;
             }
-            if (Token.ehc >= Token.amode.threshold)
+            if (Token.amode.CanTriggerSE(Token.ehc))
             {
-                if((Token.ehc * Token.amode.chance) < Constants.LowSpecialEffectChance)
+                if(!Token.amode.HasGoodChances(Token.ehc))
                 {
                     // Low chance to trigger Special Effect
                     this.defaultDesc += MainController.LowChanceDesc;
