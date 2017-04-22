@@ -81,11 +81,11 @@ namespace MeleeRebalance
             original = null;
             foreach (ModMetaData current in ModsConfig.ActiveModsInLoadOrder.ToList<ModMetaData>())
             {
-                if (current.Identifier.Equals(Constants.DefensivePositionsFolder))
+                if (current.Name.Equals(Constants.DefensivePositionsName))
                 {
                     Log.Warning(string.Concat(new object[]
                     {
-                    "Melee Rebalance: Defensive Possitions Mod active. Adapting Detours."
+                    "Melee Rebalance: Defensive Positions Mod active. Adapting Detours."
                     }));
                     foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
                     {
@@ -326,7 +326,7 @@ namespace MeleeRebalance
         public static float[] Mechances = { 1f / 4f, 1f / 4f, 1f / 2.5f, 1f / 3f };
         public const int CommandGroupKey = 23128736;
         public static BindingFlags BindF = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static;
-        public const string DefensivePositionsFolder = "DefensivePositions";
+        public const string DefensivePositionsName = "Defensive Positions";
         public const string LowChanceTex = "UI_Overlay_LowChance";
         public const string NoChanceTex = "UI_Overlay_NoChance";
     }
